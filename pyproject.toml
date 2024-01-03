@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "poetry-extensions"
+version = "0.1.0"
+description = ""
+authors = ["likianta <likianta@foxmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+argsense = "^0.5.5"
+lk-utils = "^2.8.0"
+toml = "*"
+
+[tool.poetry.group.dev.dependencies]
+poetry = "*"
+
+[[tool.poetry.source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+priority = "default"
+
+[[tool.poetry.source]]
+name = "likianta-hosted"
+url = "http://likianta.pro:2006/"
+priority = "supplemental"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
