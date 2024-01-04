@@ -13,7 +13,7 @@ from lk_utils.time_utils import timestamp
 @cli.cmd()
 def main(
     cwd: str = '.',
-    file_o: str = None,
+    filename: str = 'requirements.lock',
     include_dev_group: bool = False,
     only_top_deps: bool = True,
     flatten_top_deps: bool = False,
@@ -25,7 +25,7 @@ def main(
     """
     file_i = f'{cwd}/poetry.lock'
     file_m = f'{cwd}/pyproject.toml'  # assistant
-    file_o = file_o or f'{cwd}/requirements.lock'
+    file_o = f'{cwd}/{filename}'
     
     data_i = _reformat_locked_data(loads(file_i, 'toml'))
     data_m = _reformat_pyproj_data(loads(file_m, 'toml'), include_dev_group)
