@@ -108,6 +108,8 @@ def main(
                     all_info[dep_name]['markers'].add(dep_spec['markers'])
     # inherit markers
     for name, deps in all_deps.items():
+        if name in data_m:  # the top deps can't be inherited
+            continue
         if name in all_info:
             base_markers: set = all_info[name]['markers']
             for dep_name in deps:
