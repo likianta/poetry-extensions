@@ -227,9 +227,17 @@ def _reformat_locked_data(data: dict) -> dict:
         for k1, v1 in tuple(deps.items()):
             if isinstance(v1, dict) and v1.get('optional', False):
                 try:
-                    assert (m := v1['markers']).startswith('extra ==')
-                    ex_name = re.search(r'extra == "(\w+)"', m).group(1)
-                    v1.pop('markers')
+                    if (markers := v1['markers']).startswith('extra =='):
+                        #   e.g. {..., 'markers': 'extra == "linkify"'}
+                        ex_name = markers.split('"')[1]
+                        v1.pop('markers')
+                    else:
+                        assert ' and extra ==' in (markers := v1['markers'])
+                        #   e.g. {..., 'markers': 'platform_python_ \
+                        #   implementation == "CPython" and extra == "woff"'}
+                        match = re.search(r' and extra == "(\w+)"', markers)
+                        ex_name = match.group(1)
+                        v1['markers'] = v1['markers'].replace(match.group(0), '')
                     v1['extra'] = ex_name
                     if ex_name not in required_extras:
                         deps.pop(k1)
@@ -271,7 +279,7 @@ def _resolve_markers(markers: t.Set[str]) -> str:
         is_or = True
     if len(temp['python']) > 1:
         is_and = True
-    assert not (is_and and is_or), 'AND, OR cannot be represent in same time'
+    assert not (is_and and is_or), 'AND, OR cannot be present in same time'
     del temp
     
     if is_and:
