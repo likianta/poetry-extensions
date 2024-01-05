@@ -46,7 +46,8 @@ def main(
     all_info = defaultdict(lambda: {
         'version': '',
         'url'    : '',
-        'markers': set(),
+        'markers': defaultdict(set),  # {marker: {(operator, value), ...}, ...}
+        #   https://peps.python.org/pep-0496/#micro-language
         'extras' : set(),
     })
     
@@ -73,48 +74,42 @@ def main(
                 if 'platform' in raw_info:
                     p: str = raw_info['platform']
                     assert p in ('darwin', 'linux', 'win32')
-                    all_info[name]['markers'].add(f'sys_platform == "{p}"')
+                    all_info[name]['markers']['sys_platform'].add(('==', p))
                 if 'python' in raw_info:
                     pyver: str = raw_info['python']
-                    norm_pyver = []
-                    assert pyver.startswith(('==', '!=', '>=', '<=', '>', '<'))
+                    #   e.g. {..., 'python': '>=3.8,<3.11'}
                     for part in re.split(r', *', pyver):
-                        # part = re.sub(r'(\d+\.\d+(?:\.\d+)?)', r'"\1"', part)
-                        # #   e.g. '>=3.10' -> '>="3.10"'
                         a, b = re.match(
                             r'(.*?) *(\d+\.\d+(?:\.\d+)?)$', part
                         ).groups()  # e.g. '>= 3.10' -> ('>=', '3.10')
-                        norm_pyver.append('python_version {} "{}"'.format(a, b))
-                    all_info[name]['markers'].update(norm_pyver)
-        
-        # # info:direct_deps_names:markers
-        # if 'dependencies' in item:
-        #     for dep_name, dep_spec in item['dependencies'].items():
-        #         if isinstance(dep_spec, dict):
-        #             dep_name = _normalize_name(dep_name)
-        #             if 'extras' in dep_spec:
-        #                 all_info[dep_name]['extras'].update(dep_spec['extras'])
-        #
-        #         if isinstance(dep_spec, dict) and 'markers' in dep_spec:
-        #             all_info[dep_name]['markers'].add(dep_spec['markers'])
-    
+                        all_info[name]['markers']['python_version'].add((a, b))
+                        
     # add markers
     for name, item in data_i.items():
         for dep_name, dep_spec in item['dependencies'].items():
             if dep_name in all_info:
                 if isinstance(dep_spec, dict) and 'markers' in dep_spec:
-                    # if all_info[dep_name]['markers']:
-                    #     print('old markders will be override', dep_name, ':v3')
-                    all_info[dep_name]['markers'].add(dep_spec['markers'])
+                    '''
+                    case examples:
+                        {..., 'markers': 'sys_platform == "win32"'}
+                        {..., 'markers': 'platform_machine != "i386" and
+                            platform_machine != "i686"'}
+                        {..., 'markers': 'sys_platform == "freebsd" or
+                            sys_platform == "linux"'}
+                    '''
+                    for part in re.split(r' (?:and|or) ', dep_spec['markers']):
+                        a, b, c = re.match(r'(.+) (.+) "(.+)"', part).groups()
+                        all_info[dep_name]['markers'][a].add((b, c))
     # inherit markers
     for name, deps in all_deps.items():
         if name in data_m:  # the top deps can't be inherited
             continue
         if name in all_info:
-            base_markers: set = all_info[name]['markers']
+            base_markers: dict = all_info[name]['markers']
             for dep_name in deps:
                 if dep_name in all_info:
-                    all_info[dep_name]['markers'].update(base_markers)
+                    for k, v in base_markers.items():
+                        all_info[dep_name]['markers'][k].update(v)
     
     for name in sorted(all_info.keys()):
         dict_ = all_info[name]
@@ -265,29 +260,43 @@ def _reformat_pyproj_data(data: dict, include_dev_group: bool) -> dict:
     return {_normalize_name(k): v for k, v in default.items()}
 
 
-def _resolve_markers(markers: t.Set[str]) -> str:
-    temp = defaultdict(list)
-    for m in markers:
-        a, b = m.split(' ', 1)
-        #   e.g. 'python == "3.10"' -> ('python', '== "3.10"')
-        temp[a].append(b)
+def _resolve_markers(markers: t.Dict[str, t.Set[t.Tuple[str, str]]]) -> str:
+    """
+    https://peps.python.org/pep-0496/
+    practical examples:
+        {'python_version': {('>=', '3.8'), ('<', '3.12')}}
+            -> 'python_version >= "3.8" and python_version < "3.11"'
+        {'python_version': {('==', '3.8'), ('==', '3.12')}}
+            -> 'python_version == "3.8" or python_version == "3.12"'
+        {'python_version': {('>=', '3.8')}, 'sys_platform': {('==', 'win32')}}
+            -> '(python_version >= "3.8") and (sys_platform == "win32")'
+    """
+    # fix duplicate markers
+    if 'platform_system' in markers:
+        dict_ = {'Darwin': 'darwin', 'Linux': 'linux', 'Windows': 'win32'}
+        for k, v in markers.pop('platform_system'):
+            markers['sys_platform'].add((k, dict_[v]))
     
-    is_and = False
-    is_or = False
-    if (
-        len(temp['sys_platform']) > 1 or
-        (temp['sys_platform'] and temp['os_name'])
-    ):
-        is_or = True
-    if len(temp['python']) > 1:
-        is_and = True
-    assert not (is_and and is_or), 'AND, OR cannot be present in same time'
-    del temp
-    
-    if is_and:
-        return ' and '.join(sorted(markers))
-    else:
-        return ' or '.join(sorted(markers))
+    groups = []
+    for marker, constraints in markers.items():
+        assert constraints
+        has_equal_sign = False
+        parts = []
+        for operator, value in sorted(constraints):
+            parts.append('{} {} "{}"'.format(marker, operator, value))
+            if not has_equal_sign:
+                if operator == '==':
+                    has_equal_sign = True
+        if len(parts) == 1:
+            groups.append(parts[0])
+        else:
+            # how to join `parts`
+            sep = ' or ' if has_equal_sign else ' and '
+            groups.append('({})'.format(sep.join(parts)))
+            
+    if len(groups) == 1:
+        return ' and '.join(groups).strip('()')
+    return ' and '.join(groups)
 
 
 if __name__ == '__main__':
