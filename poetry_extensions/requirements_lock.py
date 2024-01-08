@@ -15,8 +15,7 @@ def main(
     cwd: str = '.',
     filename: str = 'requirements.lock',
     include_dev_group: bool = False,
-    only_top_deps: bool = True,
-    flatten_top_deps: bool = False,
+    flatten_deps: bool = False,
 ) -> None:
     """
     kwargs:
@@ -29,17 +28,14 @@ def main(
     
     data_i = _reformat_locked_data(loads(file_i, 'toml'))
     data_m = _reformat_pyproj_data(loads(file_m, 'toml'), include_dev_group)
-    data_o = _init_output_template(file_o, flatten_top_deps)
+    data_o = _init_output_template(file_o, flatten_deps)
     
-    if only_top_deps:
-        top_deps = data_m.keys()
-        all_deps = _flatten_all_dependencies(data_i)
-        if flatten_top_deps:
-            top_deps = set(_flatten_top_dependencies(top_deps, all_deps))
-        else:
-            top_deps = set(top_deps)
+    top_deps = data_m.keys()
+    all_deps = _flatten_all_dependencies(data_i)
+    if flatten_deps:
+        top_deps = set(_flatten_top_dependencies(top_deps, all_deps))
     else:
-        raise NotImplementedError
+        top_deps = set(top_deps)
     
     # -------------------------------------------------------------------------
     
