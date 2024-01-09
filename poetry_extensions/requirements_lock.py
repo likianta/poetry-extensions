@@ -3,7 +3,6 @@ import typing as t
 from collections import defaultdict
 
 from argsense import cli
-
 from lk_utils import dumps
 from lk_utils import fs
 from lk_utils import loads
@@ -20,7 +19,7 @@ def main(
     """
     kwargs:
         include_dev_group (-d):
-        flatten_top_deps (-f):
+        flatten_deps (-f):
     """
     file_i = f'{cwd}/poetry.lock'
     file_m = f'{cwd}/pyproject.toml'  # assistant
@@ -36,14 +35,16 @@ def main(
         top_deps = set(_flatten_top_dependencies(top_deps, all_deps))
     else:
         top_deps = set(top_deps)
+    # print(sorted(top_deps), ':l')
     
     # -------------------------------------------------------------------------
     
     all_info = defaultdict(lambda: {
         'version': '',
         'url'    : '',
-        'markers': defaultdict(set),  # {marker: {(operator, value), ...}, ...}
-        #   https://peps.python.org/pep-0496/#micro-language
+        # https://peps.python.org/pep-0496/#micro-language
+        'markers': defaultdict(lambda: defaultdict(set)),
+        #   {chain: {marker: {(operator, value), ...}, ...}, ...}
         'extras' : set(),
     })
     
@@ -70,7 +71,8 @@ def main(
                 if 'platform' in raw_info:
                     p: str = raw_info['platform']
                     assert p in ('darwin', 'linux', 'win32')
-                    all_info[name]['markers']['sys_platform'].add(('==', p))
+                    all_info[name]['markers']['<top>'][
+                        'sys_platform'].add(('==', p))
                 if 'python' in raw_info:
                     pyver: str = raw_info['python']
                     #   e.g. {..., 'python': '>=3.8,<3.11'}
@@ -78,8 +80,11 @@ def main(
                         a, b = re.match(
                             r'(.*?) *(\d+\.\d+(?:\.\d+)?)$', part
                         ).groups()  # e.g. '>= 3.10' -> ('>=', '3.10')
-                        all_info[name]['markers']['python_version'].add((a, b))
-                        
+                        all_info[name]['markers']['<top>'][
+                            'python_version'].add((a, b))
+            else:
+                all_info[name]['markers']['<top>']['<no_marker>'] = set()
+    
     # add markers
     for name, item in data_i.items():
         for dep_name, dep_spec in item['dependencies'].items():
@@ -95,17 +100,25 @@ def main(
                     '''
                     for part in re.split(r' (?:and|or) ', dep_spec['markers']):
                         a, b, c = re.match(r'(.+) (.+) "(.+)"', part).groups()
-                        all_info[dep_name]['markers'][a].add((b, c))
+                        all_info[dep_name]['markers'][name][a].add((b, c))
+                else:
+                    all_info[dep_name]['markers'][name]['<no_marker>'] = set()
+    
     # inherit markers
     for name, deps in all_deps.items():
-        if name in data_m:  # the top deps can't be inherited
-            continue
+        # if name in data_m:  # the top deps can't be inherited
+        #     continue
         if name in all_info:
             base_markers: dict = all_info[name]['markers']
             for dep_name in deps:
                 if dep_name in all_info:
-                    for k, v in base_markers.items():
-                        all_info[dep_name]['markers'][k].update(v)
+                    for k, v in tuple(base_markers.items()):
+                        for k1, v1 in v.items():
+                            if k1 != '<no_marker>':
+                                all_info[dep_name]['markers'][
+                                    name][k1].update(v1)
+                    # if name == 'pyside6':  # test
+                    #     print(dep_name, base_markers, all_info[dep_name]['markers'], ':lv')
     
     for name in sorted(all_info.keys()):
         dict_ = all_info[name]
@@ -116,7 +129,8 @@ def main(
             else:
                 line = '{}=={}'.format(name, dict_['version'])
             if dict_['markers']:
-                line += ' ; {}'.format(_resolve_markers(dict_['markers']))
+                if x := _resolve_markers(dict_['markers']):
+                    line += ' ; {}'.format(x)
             data_o.append(line)
         else:
             print(f'skip {name}', ':v3s')
@@ -203,9 +217,9 @@ def _reformat_locked_data(data: dict) -> dict:
     for item in data['package']:
         name = _normalize_name(item['name'])
         out[name] = {
-            'version': item['version'],
-            'source': item['source'],
-            'files': item['files'],
+            'version'     : item['version'],
+            'source'      : item['source'],
+            'files'       : item['files'],
             'dependencies': {
                 _normalize_name(k): v
                 for k, v in item.get('dependencies', {}).items()
@@ -256,7 +270,9 @@ def _reformat_pyproj_data(data: dict, include_dev_group: bool) -> dict:
     return {_normalize_name(k): v for k, v in default.items()}
 
 
-def _resolve_markers(markers: t.Dict[str, t.Set[t.Tuple[str, str]]]) -> str:
+def _resolve_markers(
+    markers: t.Dict[str, t.Dict[str, t.Set[t.Tuple[str, str]]]]
+) -> str:
     """
     https://peps.python.org/pep-0496/
     practical examples:
@@ -267,32 +283,46 @@ def _resolve_markers(markers: t.Dict[str, t.Set[t.Tuple[str, str]]]) -> str:
         {'python_version': {('>=', '3.8')}, 'sys_platform': {('==', 'win32')}}
             -> '(python_version >= "3.8") and (sys_platform == "win32")'
     """
-    # fix duplicate markers
-    if 'platform_system' in markers:
-        dict_ = {'Darwin': 'darwin', 'Linux': 'linux', 'Windows': 'win32'}
-        for k, v in markers.pop('platform_system'):
-            markers['sys_platform'].add((k, dict_[v]))
+    total_groups = set()
     
-    groups = []
-    for marker, constraints in markers.items():
-        assert constraints
-        has_equal_sign = False
-        parts = []
-        for operator, value in sorted(constraints):
-            parts.append('{} {} "{}"'.format(marker, operator, value))
-            if not has_equal_sign:
-                if operator == '==':
-                    has_equal_sign = True
-        if len(parts) == 1:
-            groups.append(parts[0])
+    for domain, sub_markers in markers.items():
+        if '<no_marker>' in sub_markers:
+            if len(sub_markers) == 1:
+                return ''
+            else:
+                sub_markers.pop('<no_marker>')
+        
+        # fix duplicate markers
+        if 'platform_system' in sub_markers:
+            dict_ = {'Darwin': 'darwin', 'Linux': 'linux', 'Windows': 'win32'}
+            for k, v in sub_markers.pop('platform_system'):
+                sub_markers['sys_platform'].add((k, dict_[v]))
+        
+        groups = []
+        for marker, constraints in sub_markers.items():
+            assert constraints
+            has_equal_sign = False
+            parts = []
+            for operator, value in sorted(constraints):
+                parts.append('{} {} "{}"'.format(marker, operator, value))
+                if not has_equal_sign:
+                    if operator == '==':
+                        has_equal_sign = True
+            if len(parts) == 1:
+                groups.append(parts[0])
+            else:
+                # how to join `parts`
+                sep = ' or ' if has_equal_sign else ' and '
+                groups.append('({})'.format(sep.join(parts)))
+        
+        if len(groups) == 1:
+            total_groups.add('({})'.format(groups[0].strip('()')))
         else:
-            # how to join `parts`
-            sep = ' or ' if has_equal_sign else ' and '
-            groups.append('({})'.format(sep.join(parts)))
-            
-    if len(groups) == 1:
-        return ' and '.join(groups).strip('()')
-    return ' and '.join(groups)
+            total_groups.add('({})'.format(' and '.join(groups)))
+    if len(total_groups) == 1:
+        return tuple(total_groups)[0].strip('()')
+    else:
+        return ' or '.join(total_groups)
 
 
 if __name__ == '__main__':
