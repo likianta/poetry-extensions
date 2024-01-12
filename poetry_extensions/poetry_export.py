@@ -20,6 +20,13 @@ from lk_utils import run_cmd_args
 from lk_utils import xpath
 from lk_utils.time_utils import timestamp
 
+_modified_plugin_path = xpath(
+    '../chore/poetry_plugin_export_(modified)/poetry_plugin_export'
+)
+assert fs.exists(_modified_plugin_path), (
+    'see "chore/poetry_plugin_export_(modified)/readme.md"'
+)
+
 
 @cli.cmd()
 def main(
@@ -45,7 +52,7 @@ def main(
         ('--directory', fs.abspath(working_dir)),
         verbose=True,
         ignore_return=True,
-        cwd=xpath('../chore/poetry_plugin_export_(modified)'),
+        cwd=fs.parent(_modified_plugin_path),
     )
     reformat_requirements_lock_file(poetry_file, temp_file, filename_o)
     fs.remove_file(temp_file)
