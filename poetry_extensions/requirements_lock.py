@@ -1,3 +1,6 @@
+"""
+DELETE: this script is going to be deleted. pls turn to `./poetry_export.py`.
+"""
 import re
 import typing as t
 from collections import defaultdict
