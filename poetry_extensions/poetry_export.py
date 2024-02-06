@@ -137,8 +137,12 @@ def reformat_requirements_lock_file(
                     .replace(' and *', '')
                     .replace('*', '')
                 )
-                if markers.count('(') == 1:
-                    assert markers.startswith('(') and markers.endswith(')')
+                if (
+                    markers.count('(') == 1 and
+                    markers.count(')') == 1 and
+                    markers.startswith('(') and
+                    markers.endswith(')')
+                ):
                     markers = markers.strip('()')
             data_w.append('{}=={} ; {}'.format(name, ver, markers).strip(' ;'))
     
