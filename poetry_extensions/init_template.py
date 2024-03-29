@@ -23,8 +23,8 @@ template = dedent("""
     
     [[tool.poetry.source]]
     name = "tsinghua"
-    url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/"
-    priority = "default"
+    url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+    priority = "primary"
     
     [[tool.poetry.source]]
     name = "likianta-hosted"
