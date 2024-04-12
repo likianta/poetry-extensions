@@ -85,7 +85,7 @@ def reformat_requirements_lock_file(
         out = {}
         for item in poetry_data['package']:
             if item['source']['type'] == 'legacy':
-                if item['source']['reference'] == 'likianta-hosted':
+                if item['source']['reference'].startswith('likianta'):
                     name = normalize_name(item['name'])
                     out[name] = '{}/{}/{}'.format(
                         item['source']['url'],
