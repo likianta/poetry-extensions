@@ -1,4 +1,6 @@
 /.idea/
 /chore/modified_poetry_export_plugin
+/backup_commands.txt
+/temp.json
 .DS_Store
 *.pyc

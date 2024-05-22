@@ -11,15 +11,15 @@ lk_logger.setup(quiet=True, show_varnames=True)
 
 template = dedent("""
     [tool.poetry]
-    name = "$package_name$"
+    name = "<package_name>"
     version = "0.1.0"
     description = ""
     authors = ["likianta <likianta@foxmail.com>"]
     # readme = "README.md"
-    packages = [{ include = "$package_name_snakecase$" }]
+    packages = [{ include = "<package_name_snakecase>" }]
     
     [tool.poetry.dependencies]
-    python = "^$pyversion$"
+    python = "^<pyversion>"
     
     [[tool.poetry.source]]
     name = "tsinghua"
@@ -27,7 +27,7 @@ template = dedent("""
     priority = "primary"
     
     [[tool.poetry.source]]
-    name = "likianta-hosted"
+    name = "likianta-host"
     url = "http://likianta.pro:2006/"
     priority = "supplemental"
 
@@ -41,7 +41,7 @@ template = dedent("""
 def main(
     target_dir: str = None,
     package_name: str = None,
-    pyversion: str = '3.11',
+    pyversion: str = '3.12',
 ) -> None:
     if target_dir is None:
         target_dir = os.getcwd()
@@ -57,9 +57,9 @@ def main(
     
     output = (
         template
-        .replace('$package_name$', package_name)
-        .replace('$package_name_snakecase$', package_name.replace('-', '_'))
-        .replace('$pyversion$', pyversion)
+        .replace('<package_name>', package_name)
+        .replace('<package_name_snakecase>', package_name.replace('-', '_'))
+        .replace('<pyversion>', pyversion)
     )
     dumps(output, target_dir + '/pyproject.toml', 'plain')
 

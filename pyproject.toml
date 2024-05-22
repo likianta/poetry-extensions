@@ -5,14 +5,15 @@ description = ""
 authors = ["likianta <likianta@foxmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
-argsense = "^0.5.5"
-lk-utils = "^2.9.3"
+python = "^3.12"
+argsense = "^0.5.7"
+deptry = "*"
+lk-utils = "^2.10.0"
 toml = "*"
 
-# poetry_extensions/make_requirements.py
-depsland = { version = "^0.7.0b0", source = "likianta-hosted" }
-requests = "*"
+#: poetry_extensions/make_requirements.py
+# depsland = { version = "^0.7.0b0", source = "likianta-host" }
+# requests = "*"
 
 [tool.poetry.group.dev.dependencies]
 poetry = "*"
@@ -23,7 +24,7 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
 priority = "primary"
 
 [[tool.poetry.source]]
-name = "likianta-hosted"
+name = "likianta-host"
 url = "http://likianta.pro:2006/"
 priority = "supplemental"
 
