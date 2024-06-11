@@ -107,7 +107,7 @@ def reformat_requirements_lock_file(
         '# file was updated at {}'.format(timestamp('y-m-d h:n:s')),
         
         '# use `pip` command to install: \n'
-        '#   pip install -r {} --no-deps'.format(fs.basename(output_file)),
+        '#   pip install -U -r {} --no-deps'.format(fs.basename(output_file)),
         
         '',
         '--index-url https://pypi.tuna.tsinghua.edu.cn/simple',
