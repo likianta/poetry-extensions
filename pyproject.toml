@@ -6,9 +6,9 @@ authors = ["likianta <likianta@foxmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-argsense = "^0.5.7"
+argsense = "^0.5.8"
 deptry = "*"
-lk-utils = "^2.10.0"
+lk-utils = "^2.10.1"
 toml = "*"
 
 #: poetry_extensions/make_requirements.py
