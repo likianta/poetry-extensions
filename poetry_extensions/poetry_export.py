@@ -85,14 +85,15 @@ def reformat_requirements_lock_file(
     def get_package_2_custom_url_dict() -> dict:
         out = {}
         for item in poetry_data['package']:
-            if item['source']['type'] == 'legacy':
-                if item['source']['reference'].startswith('likianta'):
-                    name = normalize_name(item['name'])
-                    out[name] = '{}/{}/{}'.format(
-                        item['source']['url'],
-                        name,
-                        item['files'][0]['file'],
-                    )
+            if 'source' in item:
+                if item['source']['type'] == 'legacy':
+                    if item['source']['reference'].startswith('likianta'):
+                        name = normalize_name(item['name'])
+                        out[name] = '{}/{}/{}'.format(
+                            item['source']['url'],
+                            name,
+                            item['files'][0]['file'],
+                        )
         return out
     
     def normalize_name(raw: str) -> str:
