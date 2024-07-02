@@ -9,11 +9,8 @@ python = "^3.12"
 argsense = "^0.5.8"
 deptry = "*"
 lk-utils = "^2.10.1"
+streamlit = "^1.36.0"
 toml = "*"
-
-#: poetry_extensions/make_requirements.py
-# depsland = { version = "^0.7.0b0", source = "likianta-host" }
-# requests = "*"
 
 [tool.poetry.group.dev.dependencies]
 poetry = "*"
