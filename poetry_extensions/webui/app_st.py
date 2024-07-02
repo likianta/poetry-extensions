@@ -50,7 +50,7 @@ def _add_project_path() -> None:
         path = fs.normpath(x)
         if path not in session['project_paths']:
             session['project_paths'].insert(0, path)
-        # st.session_state['_new_project_path'] = ''
+        st.session_state['_new_project_path'] = ''
 
 
 def _reorder_project_paths() -> None:
