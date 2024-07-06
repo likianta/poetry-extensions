@@ -1,3 +1,5 @@
+import atexit
+
 import streamlit as st
 from lk_utils import fs
 
@@ -8,13 +10,23 @@ from poetry_extensions import poetry_export
 def _get_session() -> dict:
     if __name__ not in st.session_state:
         st.session_state[__name__] = {
-            'project_paths': [],
+            'project_paths': (paths := []),
         }
+        
+        if fs.exists(x := fs.xpath('_project_paths.yaml')):
+            paths.extend(fs.load(x))
+        
+        @atexit.register
+        def _save() -> None:
+            if paths := st.session_state[__name__]['project_paths']:
+                fs.dump(paths, fs.xpath('_project_paths.yaml'))
     return st.session_state[__name__]
 
 
 def main() -> None:
     session = _get_session()
+    
+    st.title('Poetry Extensions')
     
     # init
     path = st.text_input('Project path')
@@ -38,7 +50,8 @@ def main() -> None:
             # on_change=_reorder_project_paths
         )
         if st.button('Lock requirements'):
-            poetry_export.main(selected_path)
+            with st.spinner('Locking requirements...'):
+                poetry_export.main(selected_path)
         if st.button('Sort paths'):
             session['project_paths'].sort()
             st.rerun()
@@ -63,4 +76,5 @@ def _reorder_project_paths() -> None:
 
 if __name__ == '__main__':
     # strun 3001 poetry_extensions/webui/app_st.py
+    st.set_page_config(page_title='Poetry Extensions')
     main()

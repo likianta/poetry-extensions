@@ -1,6 +1,7 @@
 /.idea/
 /chore/modified_poetry_export_plugin
+/poetry_extensions/webui/_project_paths.yaml
 /backup_commands.txt
 /temp.json
+__pycache__/
 .DS_Store
-*.pyc
