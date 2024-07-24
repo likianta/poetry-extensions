@@ -7,8 +7,8 @@ authors = ["likianta <likianta@foxmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.12"
 argsense = "^0.5.8"
-deptry = "*"
-lk-utils = "^2.10.1"
+lk-logger = "^5.7.6"
+lk-utils = "^2.10.7"
 streamlit = "^1.36.0"
 toml = "*"
 
