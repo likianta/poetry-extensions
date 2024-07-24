@@ -23,7 +23,13 @@ def main(source_dir: str, include_dev_group: bool = False) -> None:
     project_dir = fs.parent(source_dir)
     assert fs.exists(f"{project_dir}/pyproject.toml")
 
-    imported_packages = set()  # {top_name, ...}
+    imported_packages = set()  # {pkg_name, ...}
+    # {`aaa_bbb`: `ccc-ddd`, ...}
+    known_aliases = {
+        "hid": "hidapi",
+        "serial": "pyserial",
+        "yaml": "pyyaml",
+    }
     for f in fs.findall_files(source_dir, ".py"):
         code = fs.load(f.path)
         tree = ast.parse(code)
@@ -31,11 +37,13 @@ def main(source_dir: str, include_dev_group: bool = False) -> None:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     top_name = alias.name.split(".")[0]
-                    imported_packages.add(top_name)
+                    pkg_name = known_aliases.get(top_name, top_name.replace("_", "-"))
+                    imported_packages.add(pkg_name)
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     top_name = node.module.split(".")[0]
-                    imported_packages.add(top_name)
+                    pkg_name = known_aliases.get(top_name, top_name.replace("_", "-"))
+                    imported_packages.add(pkg_name)
     print(len(imported_packages))
 
     defined_packages = set()
@@ -43,21 +51,18 @@ def main(source_dir: str, include_dev_group: bool = False) -> None:
     for x in conf["tool"]["poetry"]["dependencies"]:
         if x == "python":
             continue
-        name = x.replace("-", "_")
-        defined_packages.add(name)
+        defined_packages.add(x)
     if "group" in conf["tool"]["poetry"]:
         for k, x in conf["tool"]["poetry"]["group"].items():
             if not include_dev_group and k == "dev":
                 continue
             for y in x["dependencies"]:
-                name = y.replace("-", "_")
-                defined_packages.add(name)
+                defined_packages.add(y)
     print(len(defined_packages))
 
     try:
         ignored = frozenset(
-            x.replace("-", "_")
-            for x in conf["tool"]["poetry-extensions"]["ignored_redundant_packages"]
+            conf["tool"]["poetry-extensions"]["ignored_redundant_packages"]
         )
     except Exception:
         ignored = frozenset()
