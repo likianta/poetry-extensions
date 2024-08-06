@@ -10,16 +10,14 @@ from poetry_extensions import poetry_export
 def _get_session() -> dict:
     if __name__ not in st.session_state:
         st.session_state[__name__] = {
-            'project_paths': (paths := []),
+            'project_paths': fs.load(fs.xpath('data.yaml')),
         }
-        
-        if fs.exists(x := fs.xpath('_project_paths.yaml')):
-            paths.extend(fs.load(x))
         
         @atexit.register
         def _save() -> None:
             if paths := st.session_state[__name__]['project_paths']:
-                fs.dump(paths, fs.xpath('_project_paths.yaml'))
+                fs.dump(paths, fs.xpath('data.yaml'))
+                
     return st.session_state[__name__]
 
 
