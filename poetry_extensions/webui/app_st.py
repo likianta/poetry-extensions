@@ -13,10 +13,10 @@ def _get_session() -> dict:
             'project_paths': fs.load(fs.xpath('data.yaml')),
         }
         
-        @atexit.register
-        def _save() -> None:
-            if paths := st.session_state[__name__]['project_paths']:
-                fs.dump(paths, fs.xpath('data.yaml'))
+        # @atexit.register
+        # def _save() -> None:
+        #     if paths := st.session_state[__name__]['project_paths']:
+        #         fs.dump(paths, fs.xpath('data.yaml'))
                 
     return st.session_state[__name__]
 

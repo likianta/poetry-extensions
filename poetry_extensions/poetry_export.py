@@ -112,7 +112,7 @@ def reformat_requirements_lock_file(
         
         '',
         '--index-url https://pypi.tuna.tsinghua.edu.cn/simple',
-        '--extra-index-url http://likianta.pro:2006',
+        '--extra-index-url http://likianta.pro:2131',
         '--trusted-host likianta.pro',
         '',
     ]

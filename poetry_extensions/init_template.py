@@ -28,7 +28,7 @@ template = dedent("""
     
     [[tool.poetry.source]]
     name = "likianta-host"
-    url = "http://likianta.pro:2006/"
+    url = "http://likianta.pro:2131/"
     priority = "supplemental"
 
     [build-system]
